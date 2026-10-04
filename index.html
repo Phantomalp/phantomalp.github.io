@@ -20,9 +20,10 @@
     h1 { font-size: 2rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem; }
     .tagline { color: var(--accent); font-weight: 500; font-size: 1.05rem; margin-bottom: 1rem; }
     p.intro { color: var(--text-muted); font-size: 1rem; margin-bottom: 1.5rem; }
-    .social-links { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+    .social-links { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
     .social-links a { display: inline-flex; align-items: center; justify-content: center; color: var(--accent); text-decoration: none; font-weight: 600; border: 1px solid var(--border); padding: 0.45rem 0.9rem; border-radius: 6px; background: var(--card-bg); font-size: 0.9rem; transition: border-color 0.2s, background-color 0.2s; }
     .social-links a:hover { border-color: var(--accent); background: #1a1e28; }
+    .social-links svg { width: 15px; height: 15px; fill: currentColor; }
     h2 { font-size: 1.3rem; margin: 2rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
     .grid { display: grid; gap: 1rem; }
     .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; }
@@ -40,7 +41,9 @@
       <div class="tagline">Web3 Technical Growth Specialist</div>
       <p class="intro">Bridging complex protocol architecture with narrative velocity. Specializing in Technical Ghostwriting, Protocol Documentation, and Ecosystem Business Development.</p>
       <div class="social-links">
-        <a href="https://x.com/Phantomalp9" target="_blank" rel="noopener noreferrer">𝕏</a>
+        <a href="https://x.com/Phantomalp9" target="_blank" rel="noopener noreferrer" aria-label="X">
+          <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
         <a href="https://github.com/Phantomalp" target="_blank" rel="noopener noreferrer">GitHub</a>
         <a href="https://t.me/Xeno_Core0" target="_blank" rel="noopener noreferrer">Telegram</a>
         <a href="https://discord.com/users/YOUR_DISCORD_USER_ID" target="_blank" rel="noopener noreferrer">Discord</a>
