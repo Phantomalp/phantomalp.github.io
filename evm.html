@@ -26,11 +26,11 @@
     
     <h1>Smart Contract Execution & Gas Optimization</h1>
     
-    <h2>The Hook: Gas is an Attack Vector, Not a Toll</h2>
+    <h2>Gas is an Attack Vector, Not a Toll</h2>
     <p>Most Web3 founders treat EVM storage like a standard PostgreSQL database, dumping unoptimized structs into state variables. They view gas costs as a UX problem. They are wrong. In the Ethereum Virtual Machine, inefficient data architecture is a direct security vulnerability.</p>
     <p>When protocol contracts deploy without rigorous opcode optimization, they invite Out-of-Gas (OOG) Denial of Service attacks and race conditions. If your state transitions require excessive <code>SSTORE</code> operations, network congestion during a high-volatility event won't just make your decentralized application expensive—it will render your treasury inaccessible. Smart contract mastery requires treating block space as a hostile, heavily constrained environment.</p>
 
-    <h2>Core Architecture: EVM State at the Bytecode Level</h2>
+    <h2>EVM State at the Bytecode Level</h2>
     <p>To architect resilient protocols, you must manipulate memory and state explicitly, bypassing high-level Solidity training wheels.</p>
     <ul>
       <li><strong>256-bit Slot Packing & Padding:</strong> The EVM maps state into 256-bit slots. Writing to these slots (<code>SSTORE</code>) is the most expensive operation in existence. Structuring variables so <code>uint96</code>, <code>uint64</code>, and <code>bool</code> pack sequentially into a single slot is the bare minimum. Failing to order them correctly forces the EVM to pad the data, multiplying your write costs unnecessarily.</li>
@@ -38,7 +38,7 @@
       <li><strong>The Zero-to-Non-Zero Arbitrage:</strong> Initializing a storage slot from zero costs 20,000 gas; updating an existing non-zero slot costs 2,900 gas. High-performance protocols manipulate this pricing tier by using bitmaps for boolean states rather than nested mappings, forcing updates rather than initializations.</li>
     </ul>
 
-    <h2>Implementation: Aggressive State Transitions</h2>
+    <h2>Aggressive State Transitions</h2>
     <p>Moving from conceptual architecture to execution requires patterns that aggressively defend the protocol's state transitions.</p>
     <ul>
       <li><strong>Memory Caching for O(n) Operations:</strong> Never read a storage variable inside a loop. If a function iterates through an array to update a global state, load the state variable into memory, execute all arithmetic against the memory cache, and push a single <code>SSTORE</code> back to state just before execution terminates.</li>
@@ -54,7 +54,7 @@
       <li><strong>Raw External Calls:</strong> When interacting with external contracts where you only need a single boolean flag, executing a raw <code>staticcall</code> in Yul allows you to check <code>returndatasize()</code> and read only the first word via <code>returndatacopy</code>, preventing unbounded memory expansion from rogue external contracts.</li>
     </ul>
 
-    <h2>Production Bottlenecks: The Execution Traps</h2>
+    <h2>The Execution Traps</h2>
     <p>When founders ignore gas constraints, they expose their protocols to fatal execution bottlenecks.</p>
     <ul>
       <li><strong>Out-of-Gas (OOG) Griefing:</strong> If a protocol distributes rewards via unbounded loops over dynamic arrays, it is writing a death sentence. As the user base grows, the gas required to execute the loop will eventually exceed the 30M block gas limit, permanently locking those funds inside the contract.</li>
