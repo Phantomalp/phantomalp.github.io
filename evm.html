@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Contract Execution & Gas Optimization | Destiny</title>
+  <style>
+    :root { --bg: #0a0b0e; --text-main: #f1f5f9; --text-muted: #94a3b8; --accent: #38bdf8; --border: #232733; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text-main); line-height: 1.7; padding: 2rem 1rem; }
+    .container { max-width: 680px; margin: 0 auto; }
+    a.back { color: var(--accent); text-decoration: none; font-size: 0.95rem; display: inline-block; margin-bottom: 2rem; }
+    a.back:hover { text-decoration: underline; }
+    h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 1.5rem; background: linear-gradient(90deg, #ffffff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.03em; }
+    h2 { font-size: 1.4rem; color: #fff; margin: 2.5rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+    h3 { font-size: 1.1rem; color: #fff; margin: 1.5rem 0 0.5rem; }
+    p { color: var(--text-muted); margin-bottom: 1.2rem; font-size: 1.05rem; }
+    ol, ul { color: var(--text-muted); margin-bottom: 1.2rem; padding-left: 1.5rem; }
+    li { margin-bottom: 0.5rem; }
+    code { font-family: monospace; background: #1e222d; padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.95em; color: #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back">← Back to Portfolio</a>
+    
+    <h1>Smart Contract Execution & Gas Optimization</h1>
+    
+    <h2>The Hook: Gas is an Attack Vector, Not a Toll</h2>
+    <p>Most Web3 founders treat EVM storage like a standard PostgreSQL database, dumping unoptimized structs into state variables. They view gas costs as a UX problem. They are wrong. In the Ethereum Virtual Machine, inefficient data architecture is a direct security vulnerability.</p>
+    <p>When protocol contracts deploy without rigorous opcode optimization, they invite Out-of-Gas (OOG) Denial of Service attacks and race conditions. If your state transitions require excessive <code>SSTORE</code> operations, network congestion during a high-volatility event won't just make your decentralized application expensive—it will render your treasury inaccessible. Smart contract mastery requires treating block space as a hostile, heavily constrained environment.</p>
+
+    <h2>Core Architecture: EVM State at the Bytecode Level</h2>
+    <p>To architect resilient protocols, you must manipulate memory and state explicitly, bypassing high-level Solidity training wheels.</p>
+    <ul>
+      <li><strong>256-bit Slot Packing & Padding:</strong> The EVM maps state into 256-bit slots. Writing to these slots (<code>SSTORE</code>) is the most expensive operation in existence. Structuring variables so <code>uint96</code>, <code>uint64</code>, and <code>bool</code> pack sequentially into a single slot is the bare minimum. Failing to order them correctly forces the EVM to pad the data, multiplying your write costs unnecessarily.</li>
+      <li><strong>Bypassing Storage with Calldata:</strong> Intermediate developers use memory for everything. Senior architects aggressively route external function parameters through <code>calldata</code>. It is non-modifiable, incredibly cheap, and mandatory for iterating through dynamic arrays without bleeding the user's wallet.</li>
+      <li><strong>The Zero-to-Non-Zero Arbitrage:</strong> Initializing a storage slot from zero costs 20,000 gas; updating an existing non-zero slot costs 2,900 gas. High-performance protocols manipulate this pricing tier by using bitmaps for boolean states rather than nested mappings, forcing updates rather than initializations.</li>
+    </ul>
+
+    <h2>Implementation: Aggressive State Transitions</h2>
+    <p>Moving from conceptual architecture to execution requires patterns that aggressively defend the protocol's state transitions.</p>
+    <ul>
+      <li><strong>Memory Caching for O(n) Operations:</strong> Never read a storage variable inside a loop. If a function iterates through an array to update a global state, load the state variable into memory, execute all arithmetic against the memory cache, and push a single <code>SSTORE</code> back to state just before execution terminates.</li>
+      <li><strong>Bitwise Execution:</strong> Instead of deploying arrays of booleans to track user claims, optimized contracts use a single <code>uint256</code> as a bitmask. Flipping individual bits with bitwise operators (<code>&</code>, <code>|</code>, <code>~</code>) costs a fraction of the gas required to iterate over a mapping, shrinking the contract's execution footprint.</li>
+    </ul>
+    
+    <h3>Granular Bytecode Control via Inline Assembly (Yul)</h3>
+    <p>Solidity’s compiler inserts extensive runtime safeguards: array bounds checks, overflow protection, and boilerplate memory allocations. In hot execution paths, dropping into Yul allows direct opcode manipulation to strip compiler bloat.</p>
+    <ul>
+      <li><strong>Exploiting Scratch Space for Zero-Allocation Hashes:</strong> Standard Solidity <code>abi.encodePacked()</code> followed by <code>keccak256</code> frequently allocates new memory past the Free Memory Pointer (<code>0x40</code>). In Yul, you write transient 32-byte chunks directly into the EVM’s 64-byte scratch space (<code>0x00</code>–<code>0x3f</code>), execute <code>keccak256(0x00, 0x40)</code>, and extract the hash without altering the free memory pointer or triggering memory gas penalties.</li>
+      <li><strong>Bypassing Compiler Bounds Checking in Loops:</strong> By reading the storage slot or calldata pointer directly via <code>sload</code> / <code>calldataload</code> within an unchecked assembly loop, you eliminate redundant array bounds validations and save approximately 30–40 gas per iteration.</li>
+      <li><strong>Optimized Custom Reverts:</strong> Standard <code>revert CustomError()</code> still incurs ABI encoding overhead. In Yul, you store the 4-byte error selector directly at memory location <code>0x00</code> using <code>mstore(0x00, 0x...)</code> and invoke <code>revert(0x1c, 0x04)</code>. This limits the revert payload strictly to the 4-byte selector without paying for 32-byte padding or heap expansion.</li>
+      <li><strong>Raw External Calls:</strong> When interacting with external contracts where you only need a single boolean flag, executing a raw <code>staticcall</code> in Yul allows you to check <code>returndatasize()</code> and read only the first word via <code>returndatacopy</code>, preventing unbounded memory expansion from rogue external contracts.</li>
+    </ul>
+
+    <h2>Production Bottlenecks: The Execution Traps</h2>
+    <p>When founders ignore gas constraints, they expose their protocols to fatal execution bottlenecks.</p>
+    <ul>
+      <li><strong>Out-of-Gas (OOG) Griefing:</strong> If a protocol distributes rewards via unbounded loops over dynamic arrays, it is writing a death sentence. As the user base grows, the gas required to execute the loop will eventually exceed the 30M block gas limit, permanently locking those funds inside the contract.</li>
+      <li><strong>State-Driven Reentrancy:</strong> Checks-Effects-Interactions (CEI) violations happen when state variables are updated after an external call. Malicious fallback functions (or standard ERC777 callbacks) can hijack the execution flow, draining the contract before the initial state is ever finalized.</li>
+      <li><strong>Uninitialized Storage Pointers:</strong> In complex architectures using nested structs, failing to explicitly define data locations forces local variables to point directly to storage slot 0. An attacker can unintentionally overwrite the contract's admin address simply by passing a maliciously formatted struct into a vulnerable function.</li>
+    </ul>
+    
+  </div>
+</body>
+</html>
